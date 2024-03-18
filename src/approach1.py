@@ -81,9 +81,9 @@ def apply_neumann_bc(u):
     return u
 
 
-def add_noise(source):
+def add_noise(source, factor: float = 0.01):
     source_amplitude = max(source.max(), source.min())
-    noise_scale = 0.01 * source_amplitude
+    noise_scale = factor * source_amplitude
     noise = noise_scale * np.random.normal(0, 1, size=SIZE**2).reshape((SIZE, SIZE))
     source += noise
     return source
