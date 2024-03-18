@@ -6,7 +6,6 @@ from typing import TypedDict
 
 import h5py
 import matplotlib.pyplot as plt
-import numba as nb
 import numpy as np
 import scipy
 from numpy.typing import NDArray
@@ -68,7 +67,7 @@ def load(source, bc: BoundaryConditions, spacing: float):
     b[:, -1] += bc["boundary_condition3"]
     b[-1, :] += bc["boundary_condition4"]
 
-    return b.ravel()  # * spacing**2
+    return b.ravel()
 
 
 def main():
@@ -119,8 +118,7 @@ def main():
 
     _, ax = plt.subplots(nrows=1, ncols=2)
     ax[0].imshow(ground_truth_inner, vmax=vmax, vmin=vmin, cmap="gray")
-    # ax[1].imshow(u_inner.reshape((SIZE, SIZE)), vmax=vmax, vmin=vmin, cmap="gray")
-    ax[1].imshow(u_inner.reshape((SIZE, SIZE)), cmap="gray")
+    ax[1].imshow(u_inner.reshape((SIZE, SIZE)), vmax=vmax, vmin=vmin, cmap="gray")
     # ax[2].imshow(u_wrong_bc, vmax=vmax, vmin=vmin, cmap="gray")
     ax[0].set_title("Ground truth")
     ax[1].set_title("Poisson with correct BC")
