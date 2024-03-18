@@ -3,14 +3,14 @@ Solve Poisson using Jacobi's method with convolution (works well for 3D cases)
 """
 
 from functools import partial
-import scipy
-from scipy.ndimage import convolve, generate_binary_structure
-import numpy as np
-import numba as nb
-from numba_progress import ProgressBar
-import matplotlib.pyplot as plt
-import h5py
 
+import h5py
+import matplotlib.pyplot as plt
+import numba as nb
+import numpy as np
+import scipy
+from numba_progress import ProgressBar
+from scipy.ndimage import convolve, generate_binary_structure
 
 f = h5py.File("../jhtdb/jhtdb_isotropic1024fine_3D_pressure.h5", "r")
 xcoor = np.array(f["xcoor"])
@@ -18,7 +18,7 @@ xcoor = np.array(f["xcoor"])
 SIZE = 256
 NUM_ITERATIONS = 10_000
 FILENAME = "jhtdb.mat"
-SPACING = (xcoor[1] - xcoor[0]) / 2
+SPACING = xcoor[1] - xcoor[0]
 
 
 def main():
@@ -59,6 +59,7 @@ def main():
 
 
 def iterate(num_iter, arr, source, kernel, dirichlet_fn, progress):
+    source = 0.25 * source
     for _ in range(num_iter):
         arr = convolve(arr, kernel, mode="constant") - source
         arr = dirichlet_fn(arr)

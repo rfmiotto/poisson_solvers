@@ -2,12 +2,12 @@
 Solve Poisson using Jacobi's method with loops
 """
 
-import scipy
-import numpy as np
-import numba as nb
-from numba_progress import ProgressBar
-import matplotlib.pyplot as plt
 import h5py
+import matplotlib.pyplot as plt
+import numba as nb
+import numpy as np
+import scipy
+from numba_progress import ProgressBar
 
 f = h5py.File("../jhtdb/jhtdb_isotropic1024fine_3D_pressure.h5", "r")
 xcoor = np.array(f["xcoor"])
@@ -15,7 +15,7 @@ xcoor = np.array(f["xcoor"])
 SIZE = 256
 NUM_ITERATIONS = 10_000
 FILENAME = "jhtdb.mat"
-SPACING = (xcoor[1] - xcoor[0]) / 2
+SPACING = xcoor[1] - xcoor[0]
 
 
 def main():
@@ -53,16 +53,18 @@ def main():
 
 
 @nb.njit(nogil=True)
-def iterate(num_iter: int, arr, source, progress):
+def iterate(num_iter: int, arr, scaled_source, progress):
     num_y, num_x = arr.shape
     for _ in range(num_iter):
         # arr = apply_neumann_bc(arr)
         for i in range(1, num_y - 1):
             for j in range(1, num_x - 1):
-                arr[i, j] = (
-                    0.25
-                    * (arr[i + 1, j] + arr[i - 1, j] + arr[i, j + 1] + arr[i, j - 1])
-                    - source[i, j]
+                arr[i, j] = 0.25 * (
+                    arr[i + 1, j]
+                    + arr[i - 1, j]
+                    + arr[i, j + 1]
+                    + arr[i, j - 1]
+                    - scaled_source[i, j]
                 )
 
         progress.update(1)
