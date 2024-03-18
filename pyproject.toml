@@ -4,12 +4,17 @@ version = "0.1.0"
 description = ""
 authors = ["Renato Miotto <renato.fmiotto@gmail.com>"]
 readme = "README.md"
-packages = [{include = "poisson_solver"}]
+packages = [{ include = "poisson_solver" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 numpy = "^1.26.4"
 matplotlib = "^3.8.3"
+tqdm = "^4.66.2"
+scipy = "^1.12.0"
+numba = "^0.59.0"
+numba-progress = "^1.1.0"
+h5py = "^3.10.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -23,3 +28,6 @@ nptyping = "^2.5.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+exclude = ["**/__pycache__/**"]
