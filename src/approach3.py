@@ -95,7 +95,18 @@ def main():
 
     # u_inner = conjgrad(laplacian_operator, b, np.zeros((num_points_inner)))
 
-    u_inner, cg_info = scipy.sparse.linalg.cg(matrix, b, rtol="1e-12")
+    residuals = []
+
+    def report(sol_vec):
+        mse = (np.square(matrix * sol_vec - b)).mean()
+        residuals.append(mse)
+
+    u_inner, cg_info = scipy.sparse.linalg.cg(matrix, b, rtol="1e-12", callback=report)
+
+    plt.subplot(2, 1, 1)
+    plt.plot(residuals)
+    plt.yscale("log")
+    plt.show()
 
     if cg_info != 0:
         raise RuntimeWarning("Convergence to tolerance not achieved")
