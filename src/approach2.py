@@ -59,7 +59,7 @@ def main():
 
 
 def iterate(num_iter, arr, source, kernel, dirichlet_fn, progress):
-    source = 0.25 * source
+    source = 0.25 * source.copy()
     for _ in range(num_iter):
         arr = convolve(arr, kernel, mode="constant") - source
         arr = dirichlet_fn(arr)
