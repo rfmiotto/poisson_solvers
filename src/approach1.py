@@ -82,7 +82,7 @@ def iterate(num_iter: int, arr, source, progress, tol=1e-5):
         if iteration % 100 == 0:
             relative_residual_norm = np.linalg.norm(
                 source - laplacian(arr, SPACING)
-            ) / np.linalg.norm(4 * source)
+            ) / np.linalg.norm(source)
 
             residuals.append(relative_residual_norm)
 
