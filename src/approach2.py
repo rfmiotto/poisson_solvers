@@ -13,6 +13,8 @@ import scipy
 from numba_progress import ProgressBar
 from scipy.ndimage import convolve, generate_binary_structure
 
+from src.laplacian import laplacian
+
 f = h5py.File("../jhtdb/jhtdb_isotropic1024fine_3D_pressure.h5", "r")
 xcoor = np.array(f["xcoor"])
 
@@ -35,7 +37,7 @@ def main():
     # source = add_noise(source)
 
     with ProgressBar(total=NUM_ITERATIONS) as progress:
-        u = iterate(
+        u, residuals = iterate(
             NUM_ITERATIONS,
             u,
             source,
@@ -43,6 +45,11 @@ def main():
             boundary_condition_fn,
             progress,
         )
+
+    plt.subplot(2, 1, 1)
+    plt.plot(residuals)
+    plt.yscale("log")
+    plt.show()
 
     # u_wrong_bc = np.zeros((SIZE, SIZE))
     # u_wrong_bc = set_zero_dirichlet_boundary_condition(u_wrong_bc)
@@ -65,15 +72,34 @@ def main():
     plt.show()
 
 
-def iterate(num_iter, arr, source, kernel, bc_fn, progress):
+def iterate(num_iter, arr, source, kernel, bc_fn, progress, tol=1e-5):
+    residuals = []
+
     source = 0.25 * source.copy()
-    for _ in range(num_iter):
+    for iteration in range(num_iter):
         arr = convolve(arr, kernel, mode="constant") - source
         arr = bc_fn(arr)
 
+        if iteration % 100 == 0:
+            relative_residual_norm = np.linalg.norm(
+                4 * source - laplacian(arr, SPACING)
+            ) / np.linalg.norm(4 * source)
+
+            residuals.append(relative_residual_norm)
+
+            if relative_residual_norm < tol:
+                return arr, residuals
+
         progress.update(1)
 
-    return arr
+    return arr, residuals
+
+
+# def laplacian(arr):
+#     dsdx, dsdy = np.gradient(arr, edge_order=2)
+#     part1 = np.gradient(dsdx, edge_order=2, axis=0)
+#     part2 = np.gradient(dsdy, edge_order=2, axis=1)
+#     return part1 + part2
 
 
 def kernel_operator():
