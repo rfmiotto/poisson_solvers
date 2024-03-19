@@ -75,15 +75,15 @@ def main():
 def iterate(num_iter, arr, source, kernel, bc_fn, progress, tol=1e-5):
     residuals = []
 
-    source = 0.25 * source.copy()
+    scaled_source = 0.25 * source
     for iteration in range(num_iter):
-        arr = convolve(arr, kernel, mode="constant") - source
+        arr = convolve(arr, kernel, mode="constant") - scaled_source
         arr = bc_fn(arr)
 
         if iteration % 100 == 0:
             relative_residual_norm = np.linalg.norm(
-                4 * source - laplacian(arr, SPACING)
-            ) / np.linalg.norm(4 * source)
+                source - laplacian(arr, 1)
+            ) / np.linalg.norm(source)
 
             residuals.append(relative_residual_norm)
 
