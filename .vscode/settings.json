@@ -5,6 +5,7 @@
     "editor.codeActionsOnSave": {
       "source.organizeImports": "explicit"
     },
+    "editor.tabSize": 4,
   },
   "python.languageServer": "Pylance",
   "python.analysis.diagnosticSeverityOverrides": {
