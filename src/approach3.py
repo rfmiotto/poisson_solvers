@@ -97,8 +97,10 @@ def main():
     residuals = []
 
     def report(sol_vec):
-        mse = (np.square(matrix * sol_vec - b)).mean()
-        residuals.append(mse)
+        relative_residual_norm = np.linalg.norm(b - matrix @ sol_vec) / np.linalg.norm(
+            b
+        )
+        residuals.append(relative_residual_norm)
 
     u_inner, cg_info = scipy.sparse.linalg.cg(matrix, b, rtol="1e-12", callback=report)
 
