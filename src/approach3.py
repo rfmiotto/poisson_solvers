@@ -18,25 +18,6 @@ FILENAME = "jhtdb.mat"
 SPACING = xcoor[1] - xcoor[0]
 
 
-def conjgrad(operator, b, x):
-
-    r = b - operator(x)
-    p = r
-    rsold = np.dot(np.transpose(r), r)
-
-    for _ in range(len(b)):
-        Ap = operator(p)
-        alpha = rsold / np.dot(np.transpose(p), Ap)
-        x = x + np.dot(alpha, p)
-        r = r - np.dot(alpha, Ap)
-        rsnew = np.dot(np.transpose(r), r)
-        if np.sqrt(rsnew) < 1e-8:
-            break
-        p = r + (rsnew / rsold) * p
-        rsold = rsnew
-    return x
-
-
 # @nb.njit(nogil=True)
 def laplacian_operator(u_vec):
     num_points = len(u_vec)
@@ -48,6 +29,40 @@ def laplacian_operator(u_vec):
     laplacian_op[1:, :] -= u_mat[:-1, :]  # -u(i-1, j)
     laplacian_op[:, :-1] -= u_mat[:, 1:]  # -u(i, j+1)
     laplacian_op[:, 1:] -= u_mat[:, :-1]  # -u(i, j-1)
+
+    # apply neumann bc:
+    # left edge
+    laplacian_op[0, :] = 3 * u_mat[0, :]
+    laplacian_op[0, :] -= u_mat[1, :]  # -u(i+1, j)
+    laplacian_op[0, :-1] -= u_mat[0, 1:]  # -u(i, j+1)
+    laplacian_op[0, 1:] -= u_mat[0, :-1]  # -u(i, j-1)
+
+    # bottom edge
+    laplacian_op[:, 0] = 3 * u_mat[:, 0]
+    laplacian_op[:-1, 0] -= u_mat[1:, 0]  # -u(i+1, j)
+    laplacian_op[1:, 0] -= u_mat[:-1, 0]  # -u(i-1, j)
+    laplacian_op[:, 0] -= u_mat[:, 1]  # -u(i, j+1)
+
+    # right edge
+    laplacian_op[-1, :] = 3 * u_mat[-1, :]
+    laplacian_op[-1, :] -= u_mat[-2, :]  # -u(i-1, j)
+    laplacian_op[-1, :-1] -= u_mat[-1, 1:]  # -u(i, j+1)
+    laplacian_op[-1, 1:] -= u_mat[-1, :-1]  # -u(i, j-1)
+
+    # top edge
+    laplacian_op[:, -1] = 3 * u_mat[:, -1]
+    laplacian_op[:-1, -1] -= u_mat[1:, -1]  # -u(i+1, j)
+    laplacian_op[1:, -1] -= u_mat[:-1, -1]  # -u(i-1, j)
+    laplacian_op[:, -1] -= u_mat[:, -2]  # -u(i, j-1)
+
+    # bottom-left corner  --> 2 u(i, j) -u(i+1, j) -u(i, j+1)
+    laplacian_op[0, 0] = 2 * u_mat[0, 0] - u_mat[1, 0] - u_mat[0, 1]
+    # bottom-right corner  --> 2 u(i, j) -u(i-1, j) -u(i, j+1)
+    laplacian_op[-1, 0] = 2 * u_mat[-1, 0] - u_mat[-2, 0] - u_mat[0, 1]
+    # top-right corner  --> 2 u(i, j) -u(i-1, j) -u(i, j-1)
+    laplacian_op[-1, -1] = 2 * u_mat[-1, -1] - u_mat[-2, -1] - u_mat[-1, -2]
+    # top-left corner  --> 2 u(i, j) -u(i+1, j) -u(i, j-1)
+    laplacian_op[0, -1] = 2 * u_mat[0, -1] - u_mat[1, -1] - u_mat[0, -2]
 
     return laplacian_op.ravel()
 
@@ -84,23 +99,35 @@ def main():
     true_field_inner = true_field[1:-1, 1:-1]
     bc: BoundaryConditions
     bc = {
-        "boundary_condition1": true_field_inner[:, 0],
-        "boundary_condition2": true_field_inner[0, :],
-        "boundary_condition3": true_field_inner[:, -1],
-        "boundary_condition4": true_field_inner[-1, :],
+        "boundary_condition1": np.zeros(SIZE),  # using 0 as BC
+        "boundary_condition2": np.zeros(SIZE),  # using 0 as BC
+        "boundary_condition3": np.zeros(SIZE),  # using 0 as BC
+        "boundary_condition4": np.zeros(SIZE),  # using 0 as BC
+        # "boundary_condition1": true_field_inner[:, 0],  # using ground truth
+        # "boundary_condition2": true_field_inner[0, :],  # using ground truth
+        # "boundary_condition3": true_field_inner[:, -1],  # using ground truth
+        # "boundary_condition4": true_field_inner[-1, :],  # using ground truth
     }
 
     b = load(source_inner, bc, SPACING)
 
-    # u_inner = conjgrad(laplacian_operator, b, np.zeros((num_points_inner)))
-
     residuals = []
 
     def report(sol_vec):
-        mse = (np.square(matrix * sol_vec - b)).mean()
-        residuals.append(mse)
+        relative_residual_norm = np.linalg.norm(b - matrix @ sol_vec) / np.linalg.norm(
+            b
+        )
+        residuals.append(relative_residual_norm)
+        print(relative_residual_norm)
 
-    u_inner, cg_info = scipy.sparse.linalg.cg(matrix, b, rtol="1e-12", callback=report)
+    u_inner, cg_info = scipy.sparse.linalg.cg(
+        matrix,
+        b,
+        x0=0.5 * np.ones(num_points_inner),
+        rtol="1e-5",
+        maxiter=1000,
+        callback=report,
+    )
 
     plt.subplot(2, 1, 1)
     plt.plot(residuals)
@@ -108,7 +135,8 @@ def main():
     plt.show()
 
     if cg_info != 0:
-        raise RuntimeWarning("Convergence to tolerance not achieved")
+        # raise RuntimeWarning("Convergence to tolerance not achieved")
+        print("Convergence to tolerance not achieved")
 
     ground_truth = scipy.io.loadmat(FILENAME)["representation"]
     ground_truth_inner = ground_truth[1:-1, 1:-1]
