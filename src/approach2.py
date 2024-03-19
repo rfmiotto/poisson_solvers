@@ -3,6 +3,7 @@ Solve Poisson using Jacobi's method with convolution (works well for 3D cases)
 """
 
 from functools import partial
+from typing import Optional
 
 import h5py
 import matplotlib.pyplot as plt
@@ -24,8 +25,9 @@ SPACING = xcoor[1] - xcoor[0]
 def main():
     u = np.zeros((SIZE, SIZE))
 
-    dirichlet_fn = partial(set_boundary_conditions, file=FILENAME)
-    # u = set_boundary_conditions(u, FILENAME)
+    boundary_condition_fn = partial(set_dirichlet_bc, filename=FILENAME)
+    # boundary_condition_fn = partial(set_dirichlet_bc) # zero dirichlet
+    # boundary_condition_fn = partial(set_neumann_bc)
 
     source = get_source_term(FILENAME)
     source *= SPACING**2
@@ -34,7 +36,12 @@ def main():
 
     with ProgressBar(total=NUM_ITERATIONS) as progress:
         u = iterate(
-            NUM_ITERATIONS, u, source, kernel_operator(), dirichlet_fn, progress
+            NUM_ITERATIONS,
+            u,
+            source,
+            kernel_operator(),
+            boundary_condition_fn,
+            progress,
         )
 
     # u_wrong_bc = np.zeros((SIZE, SIZE))
@@ -58,25 +65,15 @@ def main():
     plt.show()
 
 
-def iterate(num_iter, arr, source, kernel, dirichlet_fn, progress):
+def iterate(num_iter, arr, source, kernel, bc_fn, progress):
     source = 0.25 * source.copy()
     for _ in range(num_iter):
         arr = convolve(arr, kernel, mode="constant") - source
-        arr = dirichlet_fn(arr)
-        # arr = apply_neumann_bc(arr)
+        arr = bc_fn(arr)
 
         progress.update(1)
 
     return arr
-
-
-@nb.njit(nogil=True)
-def apply_neumann_bc(u):
-    u[:, 0] = u[:, 1]
-    u[0, :] = u[1, :]
-    u[:, -1] = u[:, -2]
-    u[-1, :] = u[-2, :]
-    return u
 
 
 def kernel_operator():
@@ -97,22 +94,28 @@ def get_source_term(file: str):
     return scipy.io.loadmat(file)["laplacian"]
 
 
-def set_boundary_conditions(u, file: str):
-    true_field = scipy.io.loadmat(file)["representation"]
+def set_dirichlet_bc(u, filename: Optional[str] = ""):
+    if filename:
+        true_field = scipy.io.loadmat(filename)["representation"]
 
-    u[:, 0] = true_field[:, 0]
-    u[0, :] = true_field[0, :]
-    u[:, -1] = true_field[:, -1]
-    u[-1, :] = true_field[-1, :]
-
+        u[:, 0] = true_field[:, 0]
+        u[0, :] = true_field[0, :]
+        u[:, -1] = true_field[:, -1]
+        u[-1, :] = true_field[-1, :]
+    else:
+        u[:, 0] = 0.0
+        u[0, :] = 0.0
+        u[:, -1] = 0.0
+        u[-1, :] = 0.0
     return u
 
 
-def set_zero_dirichlet_boundary_condition(u):
-    u[:, 0] = 0.0
-    u[0, :] = 0.0
-    u[:, -1] = 0.0
-    u[-1, :] = 0.0
+@nb.njit(nogil=True)
+def set_neumann_bc(u):
+    u[:, 0] = u[:, 1]
+    u[0, :] = u[1, :]
+    u[:, -1] = u[:, -2]
+    u[-1, :] = u[-2, :]
     return u
 
 
