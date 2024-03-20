@@ -32,6 +32,7 @@ def main():
 
         u = np.zeros((SIZE, SIZE))
         u = set_dirichlet_bc(u, FILENAME)
+        # u = set_dirichlet_bc(u)
 
         with ProgressBar(total=NUM_ITERATIONS) as progress:
             u, residuals = iterate(
@@ -42,6 +43,8 @@ def main():
             )
 
         filename = f"jacobi_ground_truth_bc_{noise_lvl:.2f}_noise.mat"
+        # filename = f"jacobi_zero_dirichlet_bc_{noise_lvl:.2f}_noise.mat"
+        # filename = f"jacobi_zero_neumann_bc_{noise_lvl:.2f}_noise.mat"
         save_results(filename, u, residuals, source, noise_lvl)
 
 
@@ -54,7 +57,7 @@ def iterate(num_iter, arr, source, progress, tol=1e-3):
     num_y, num_x = arr.shape
 
     for iteration in range(num_iter):
-        # arr = apply_neumann_bc(arr)
+        # arr = set_neumann_bc(arr)
         for i in range(1, num_y - 1):
             for j in range(1, num_x - 1):
                 arr[i, j] = 0.25 * (
