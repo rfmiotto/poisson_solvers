@@ -32,7 +32,6 @@ def main():
     # boundary_condition_fn = partial(set_neumann_bc)
 
     source = get_source_term(FILENAME)
-    source *= SPACING**2
 
     # source = add_noise(source)
 
@@ -75,14 +74,15 @@ def main():
 def iterate(num_iter, arr, source, kernel, bc_fn, progress, tol=1e-5):
     residuals = []
 
-    scaled_source = 0.25 * source
+    scaled_source = 0.25 * SPACING**2 * source
+
     for iteration in range(num_iter):
         arr = convolve(arr, kernel, mode="constant") - scaled_source
         arr = bc_fn(arr)
 
         if iteration % 100 == 0:
             relative_residual_norm = np.linalg.norm(
-                source - laplacian(arr, 1)
+                source - laplacian(arr, SPACING)
             ) / np.linalg.norm(source)
 
             residuals.append(relative_residual_norm)
