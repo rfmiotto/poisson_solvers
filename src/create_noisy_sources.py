@@ -41,7 +41,7 @@ def main():
         axes[i, j].set_axis_off()
         axes[i, j].set_title(f"noise lvl: {noise_lvl}")
 
-        save_results(filename, source)
+        save_results(filename, source, noise_lvl)
 
     for i in range(3):
         for j in range(4):
@@ -56,9 +56,10 @@ def convert_to_ij(k: int) -> tuple[int, int]:
     return i, j
 
 
-def save_results(filename: str, source: NDArray) -> None:
+def save_results(filename: str, source: NDArray, noise_lvl) -> None:
     mat_dict = {
         "laplacian": source.reshape((SIZE, SIZE)),
+        "noise_lvl": noise_lvl,
     }
     scipy.io.savemat(filename, mat_dict)
 
