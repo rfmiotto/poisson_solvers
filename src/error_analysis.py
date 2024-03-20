@@ -2,6 +2,8 @@
 Solve Poisson using conjugate gradient method
 """
 
+import fnmatch
+import os
 from typing import TypedDict
 
 import h5py
@@ -10,13 +12,12 @@ import numpy as np
 import scipy
 from numpy.typing import NDArray
 
-f = h5py.File("../jhtdb/jhtdb_isotropic1024fine_3D_pressure.h5", "r")
-xcoor = np.array(f["xcoor"])
+h5f = h5py.File("../jhtdb/jhtdb_isotropic1024fine_3D_pressure.h5", "r")
+xcoor = np.array(h5f["xcoor"])
 
 SIZE = 256 - 2
-FILENAME = "jhtdb.mat"
+GT_FILENAME = "jhtdb.mat"
 SPACING = xcoor[1] - xcoor[0]
-NOISE_LEVELS = np.linspace(0, 0.20, 21)
 
 
 # @nb.njit(nogil=True)
@@ -55,10 +56,9 @@ def load(source, bc: BoundaryConditions, spacing: float):
 def main():
     num_points_inner = SIZE**2
 
-    source = get_source_term(FILENAME)
-    source_inner = source[1:-1, 1:-1]
+    source_files = get_list_of_source_files()
 
-    true_field = get_ground_truth(FILENAME)
+    true_field = get_ground_truth(GT_FILENAME)
     true_field_inner = true_field[1:-1, 1:-1]
 
     bc: BoundaryConditions
@@ -79,10 +79,11 @@ def main():
         )
         residuals.append(relative_residual_norm)
 
-    for noise_lvl in NOISE_LEVELS:
-        source_noise = add_noise(source_inner, noise_lvl)
+    for source_file in source_files:
+        source, noise_lvl = get_source_term(source_file)
+        source_inner = source[1:-1, 1:-1]
 
-        b = load(source_noise, bc, SPACING)
+        b = load(source_inner, bc, SPACING)
 
         matrix = scipy.sparse.linalg.LinearOperator(
             (num_points_inner, num_points_inner), matvec=laplacian_operator
@@ -104,7 +105,18 @@ def main():
 
         filename = f"cg_zero_dirichlet_bc_{noise_lvl:.2f}_noise.mat"
         # filename = f"cg_ground_truth_bc_{noise_lvl:.2f}_noise.mat"
-        save_results(filename, u_inner, residuals, source_noise)
+        save_results(filename, u_inner, residuals, source_inner)
+
+
+def get_list_of_source_files() -> list[str]:
+    files = []
+    for f in os.listdir("."):
+        if fnmatch.fnmatch(f, "jhtdb_with_*_noise.mat"):
+            files.append(f)
+
+    if not files:
+        raise FileNotFoundError("No file was found")
+    return sorted(files)
 
 
 def save_results(
@@ -118,16 +130,11 @@ def save_results(
     scipy.io.savemat(filename, mat_dict)
 
 
-def add_noise(source: NDArray, factor: float = 0.01) -> NDArray:
-    np.random.seed(0)
-    source_amplitude = max(source.max(), source.min())
-    noise_scale = factor * source_amplitude
-    noise = noise_scale * np.random.normal(0, 1, size=SIZE**2).reshape((SIZE, SIZE))
-    return source + noise
-
-
 def get_source_term(file: str) -> NDArray:
-    return scipy.io.loadmat(file)["laplacian"]
+    f = scipy.io.loadmat(file)
+    source = f["laplacian"]
+    noise_lvl = f["noise_lvl"][0][0]
+    return source, noise_lvl
 
 
 def get_ground_truth(file: str) -> NDArray:
