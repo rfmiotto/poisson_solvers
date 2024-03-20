@@ -7,7 +7,6 @@ import os
 from typing import TypedDict
 
 import h5py
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 from numpy.typing import NDArray
