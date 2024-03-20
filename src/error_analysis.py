@@ -104,7 +104,7 @@ def main():
 
         filename = f"cg_zero_dirichlet_bc_{noise_lvl:.2f}_noise.mat"
         # filename = f"cg_ground_truth_bc_{noise_lvl:.2f}_noise.mat"
-        save_results(filename, u_inner, residuals, source_inner)
+        save_results(filename, u_inner, residuals, source_inner, noise_lvl)
 
 
 def get_list_of_source_files() -> list[str]:
@@ -119,12 +119,17 @@ def get_list_of_source_files() -> list[str]:
 
 
 def save_results(
-    filename: str, solution: NDArray, residuals: list[float], source: NDArray
+    filename: str,
+    solution: NDArray,
+    residuals: list[float],
+    source: NDArray,
+    noise_lvl: float,
 ) -> None:
     mat_dict = {
         "solution": solution.reshape((SIZE, SIZE)),
         "residuals": residuals,
         "source": source.reshape((SIZE, SIZE)),
+        "noise_lvl": noise_lvl,
     }
     scipy.io.savemat(filename, mat_dict)
 
