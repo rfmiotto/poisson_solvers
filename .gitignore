@@ -4,7 +4,10 @@ __pycache__/
 *$py.class
 
 # Code outputs
+outputs/
+output/
 *.mat
+*.png
 
 # C extensions
 *.so
