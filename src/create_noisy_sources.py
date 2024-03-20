@@ -19,11 +19,13 @@ def main():
     source_inner = source[1:-1, 1:-1]
 
     dpi = 100
-    height = (256 + 50) * 3
-    width = (256 + 50) * 4
+    nrows = 3
+    ncols = 4
+    height = (256 + 50) * nrows
+    width = (256 + 50) * ncols
     fig, axes = plt.subplots(
-        nrows=3,
-        ncols=4,
+        nrows=nrows,
+        ncols=ncols,
         figsize=(width / dpi, height / dpi),
         dpi=dpi,
         layout="compressed",
@@ -43,8 +45,8 @@ def main():
 
         save_results(filename, source, noise_lvl)
 
-    for i in range(3):
-        for j in range(4):
+    for i in range(nrows):
+        for j in range(ncols):
             axes[i, j].set_axis_off()
     plt.savefig("source_noise_levels.png", transparent=False)
 
